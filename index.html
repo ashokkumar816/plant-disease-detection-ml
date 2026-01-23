@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Plant Disease Detection</title>
+
+<style>
+body { font-family: Arial; background:#f4f6f8; margin:0 }
+header { background:#2e7d32; color:white; padding:25px; text-align:center }
+.container { max-width:750px; margin:30px auto; background:white; padding:30px; border-radius:10px }
+label { font-weight:bold }
+select, textarea, input { width:100%; padding:10px; margin-top:8px; margin-bottom:15px }
+button { width:100%; padding:14px; background:#2e7d32; color:white; border:none; font-size:16px }
+.result { margin-top:20px; background:#e8f5e9; padding:15px; border-left:5px solid #2e7d32 }
+img { max-width:250px; margin-bottom:15px }
+table { width:100%; margin-top:15px; border-collapse:collapse }
+th,td { border-bottom:1px solid #ccc; padding:8px; text-align:center }
+</style>
+</head>
+
+<body>
+
+<header>
+<h1 id="title">Plant Disease Detection System</h1>
+<p id="subtitle">Upload image or enter symptoms</p>
+
+<select id="lang" onchange="setLang()">
+  <option value="en">English</option>
+  <option value="ta">தமிழ்</option>
+</select>
+</header>
+
+<div class="container">
+
+<label id="cropLabel">Select Crop</label>
+<select id="crop">
+  <option>Tomato</option>
+  <option>Potato</option>
+  <option>Pepper</option>
+</select>
+
+<label id="imageLabel">Upload Leaf Image (Optional)</label>
+<input type="file" id="image" accept="image/*" onchange="previewImage()">
+
+<img id="preview" style="display:none">
+
+<label id="symptomLabel">Enter Symptoms (Optional)</label>
+<textarea id="symptoms" rows="3"></textarea>
+
+<button onclick="predict()">Predict Disease</button>
+
+<div class="result" id="result" style="display:none;">
+  <p><b id="disease"></b></p>
+  <p id="severity"></p>
+  <p id="treatment"></p>
+  <p id="prevention"></p>
+</div>
+
+<h3>History</h3>
+<table>
+<thead>
+<tr><th>Time</th><th>Disease</th><th>Confidence</th></tr>
+</thead>
+<tbody id="history"></tbody>
+</table>
+
+</div>
+
+<script>
+const LANG = {
+  en:{
+    title:"Plant Disease Detection System",
+    subtitle:"Upload image or enter symptoms",
+    crop:"Select Crop",
+    image:"Upload Leaf Image (Optional)",
+    symptom:"Enter Symptoms (Optional)"
+  },
+  ta:{
+    title:"தாவர நோய் கண்டறிதல்",
+    subtitle:"படம் அல்லது அறிகுறிகளை உள்ளிடவும்",
+    crop:"பயிர் தேர்வு",
+    image:"இலை படத்தை பதிவேற்றவும்",
+    symptom:"அறிகுறிகள்"
+  }
+};
+
+function setLang(){
+  const l = document.getElementById("lang").value;
+  document.getElementById("title").innerText = LANG[l].title;
+  document.getElementById("subtitle").innerText = LANG[l].subtitle;
+  document.getElementById("cropLabel").innerText = LANG[l].crop;
+  document.getElementById("imageLabel").innerText = LANG[l].image;
+  document.getElementById("symptomLabel").innerText = LANG[l].symptom;
+}
+
+function previewImage(){
+  const file = document.getElementById("image").files[0];
+  const img = document.getElementById("preview");
+  if(file){
+    img.src = URL.createObjectURL(file);
+    img.style.display = "block";
+  }
+}
+
+async function predict(){
+  const fd = new FormData();
+  fd.append("crop", document.getElementById("crop").value);
+  fd.append("symptoms", document.getElementById("symptoms").value);
+  fd.append("lang", document.getElementById("lang").value);
+
+  const imgFile = document.getElementById("image").files[0];
+  if(imgFile) fd.append("image", imgFile);
+
+  const res = await fetch("/predict", { method:"POST", body:fd });
+  const d = await res.json();
+
+  document.getElementById("disease").innerText = "Disease: " + d.disease;
+  document.getElementById("severity").innerText = "Severity: " + d.severity + " (" + d.confidence + "%)";
+  document.getElementById("treatment").innerText = "Treatment: " + d.treatment;
+  document.getElementById("prevention").innerText = "Prevention: " + d.prevention;
+
+  document.getElementById("result").style.display="block";
+
+  document.getElementById("history").innerHTML =
+    d.history.map(h =>
+      `<tr><td>${h.time}</td><td>${h.disease}</td><td>${h.confidence}</td></tr>`
+    ).join("");
+}
+</script>
+
+</body>
+</html>
